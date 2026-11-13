@@ -15,6 +15,6 @@ jobs:
         with:
           node-version: 24
       - name: Check JavaScript syntax
-        run: node --check log-output/index.js && node --check project/index.js && node --check pingpong/index.js
+        run: node --check log-output/index.js && node --check project/index.js && node --check pingpong/index.js && node --check project/todo-backend/index.js
       - name: Build Docker images
-        run: docker build -t log-output:test log-output && docker build -t project:test project && docker build -t pingpong:test pingpong
+        run: docker build -t log-output:test log-output && docker build -t project:test project && docker build -t pingpong:test pingpong && docker build -t todo-backend:test project/todo-backend

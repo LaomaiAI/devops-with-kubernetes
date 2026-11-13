@@ -25,6 +25,8 @@ spec:
               value: "/usr/src/app/files/image.jpg"
             - name: IMAGE_CACHE_MS
               value: "600000"
+            - name: TODO_BACKEND_URL
+              value: http://todo-backend/todos
           volumeMounts:
             - name: project-files
               mountPath: /usr/src/app/files
