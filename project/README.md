@@ -64,3 +64,13 @@ All configuration (PORT, IMAGE_URL, IMAGE_PATH, IMAGE_CACHE_MS, TODO_BACKEND_URL
 首頁待辦清單改為由後端回傳的物件渲染：每項有 id 的待辦都顯示一個核取方塊（`type="checkbox"`，帶 `data-todo-id` 與 `onchange="toggleTodo(this)"`）；已完成的待辦文字加 `<s>` 刪除線，未完成的沒有刪除線。點選核取方塊時，前端 `toggleTodo` 以 `PUT /todos/<id>`（帶 `{"done": <勾選狀態>}`）請求後端，成功後重新載入頁面。
 前端新增 `PUT /todos/<id>` 代理：把要求轉發到 `TODO_BACKEND_URL/<id>`，原樣回傳後端的狀態碼與正文；後端連不上時回 502。
 驗證（2026-11-13）：部署後首頁的待辦都顯示核取方塊。經 Ingress（project.local）把 id 1 的待辦勾為完成，再以 port-forward 直接查後端 `GET /todos`，該項為 `done: true`，首頁該項文字出現 `<s>` 刪除線；再經代理把該項設回 `done: false`。
+
+## Exercise 4.8
+
+以 ArgoCD GitOps 管理整個 project 應用（主程式、todo-backend、broadcaster、message-receiver）。
+
+- Application：argocd/project-application.yaml，來源為本倉庫 main 分支、path: project（遞迴）、目的地命名空間 project；同步策略為自動同步、prune、selfHeal。
+- 驗證標記：project/manifests/deployment.yaml 的 Deployment 加上註釋 gitops: "true"，純粹作為證明 ArgoCD 已把 Git 狀態套用至集群的標記。
+- 修正（2026-11-13）：Application 初版的 directory.exclude 只寫 **/*.json，ArgoCD 仍把 project/package.json 當作清單解析，導致同步狀態長期維持 Unknown、條件為 ComparisonError: object 'Kind' is missing；改為 {*.json,**/*.json} 後重新套用 Application 並強制刷新，狀態變為 Synced / Healthy。
+- 驗證（2026-11-13 約 22:04 UTC）：kubectl -n argocd get applications.argoproj.io 顯示 project Synced Healthy、log-output Synced；線上 Deployment project 的註釋含 gitops: "true"。
+- 同日集群曾出現 I/O 風暴（2 核負載逾 50、kubectl 間歇超時、ArgoCD 元件重啟），經重啟 Codespace 並啟動 k3d 集群後緩解；為減輕負載，監控堆疊（Prometheus、Loki、Grafana、Alloy）暫時縮減至 0 副本，見主 README。

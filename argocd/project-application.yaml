@@ -11,7 +11,7 @@ spec:
     path: project
     directory:
       recurse: true
-      exclude: "**/*.json"
+      exclude: '{*.json,**/*.json}'
   destination:
     server: https://kubernetes.default.svc
     namespace: project
