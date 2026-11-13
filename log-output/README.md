@@ -17,3 +17,9 @@ Ingress：logoutput.local，路徑 /。
 Readiness probe：reader 容器的 readinessProbe 以 HTTP GET 檢查 `/healthz`（port 3000，initialDelaySeconds 5、periodSeconds 5、timeoutSeconds 10；逾時設 10 秒是因為 Ping-pong 查詢本身最長 5 秒）。`/healthz` 會取 ping-pong 的 `/count`，成功回 200 `OK`，失敗回 500 `Ping-pong unavailable`；該檢查只讀，不會令計數增加。
 
 驗證（2026-11-13）：`pingpong-db` 縮至 0 副本時，kubectl get pods 顯示 log-output 1/2（writer 就緒、reader 未就緒）、pingpong 0/1；恢復至 1 副本後，自動回到 2/2 與 1/1。
+
+## Exercise 4.7
+
+以 ArgoCD 實作 GitOps：集群安裝 ArgoCD（`argocd` 命名空間，官方清單，以 server-side apply 安裝，因 CRD 註解超過 262144 bytes，client-side apply 會失敗；第二輪 server-side apply 須加 `--force-conflicts`，因第一次 client-side apply 已建立 NetworkPolicy，欄位管理權衝突）。Application 清單在 `argocd/log-output-application.yaml`（宣告式定義，不用 ArgoCD UI 或 LoadBalancer patch）：來源為本倉庫 `log-output/manifests`（targetRevision HEAD），目的地為本集群 `exercises` 命名空間，`syncPolicy.automated`（prune、selfHeal）。
+
+驗證（2026-11-13）：Application 初次同步即為 Synced / Healthy（收編現有資源）；把 ConfigMap `MESSAGE` 改為 `hello world (GitOps)` 並 push（commit 7613c0c）後，ArgoCD 自動同步到集群（`kubectl get configmap log-output-config -n exercises` 讀回 `hello world (GitOps)`）；重啟 log-output Pod 後，首頁顯示 `env variable: MESSAGE=hello world (GitOps)`。
