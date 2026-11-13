@@ -42,3 +42,12 @@ All configuration (PORT, IMAGE_URL, IMAGE_PATH, IMAGE_CACHE_MS, TODO_BACKEND_URL
 ### 結論
 
 這個待辦專案規模小、資料不重要，用自行架設最划算：免費、設定全在倉庫、不用開雲端帳戶。若是生產環境、資料丟失成本高，DBaaS 更划算：自動備份與高可用省下的維護工作，值得付服務費。
+
+## Exercise 3.11：資源 requests 與 limits
+
+以 `kubectl top pods` 量度後，為專案的三個工作負載設定 requests 與 limits（見對應清單）：
+- project（前端）：requests cpu 50m、memory 64Mi；limits cpu 250m、memory 128Mi。
+- todo-backend：requests cpu 50m、memory 64Mi；limits cpu 250m、memory 128Mi。
+- todo-db（Postgres StatefulSet）：requests cpu 100m、memory 128Mi；limits cpu 500m、memory 256Mi。
+
+量度（2026-11-13）：閒置時 project 1m／19Mi、todo-backend 1m／16Mi、todo-db 1m／22Mi。套用後重啟，Pod 全部 Running，新量度為 project 0m／59Mi、todo-backend 1m／68Mi、todo-db 15m／34Mi，皆在 limits 內；首頁待辦仍在（資料保留在 PVC）。
