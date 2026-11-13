@@ -34,7 +34,8 @@ async function waitForDatabase() {
   process.exit(1);
 }
 async function prepareTable() {
-  await pool.query("CREATE TABLE IF NOT EXISTS todos (id serial primary key, content text not null, created_at timestamptz default now())");
+  await pool.query("CREATE TABLE IF NOT EXISTS todos (id serial primary key, content text not null, done boolean not null default false, created_at timestamptz default now())");
+    await pool.query("ALTER TABLE todos ADD COLUMN IF NOT EXISTS done boolean NOT NULL DEFAULT false");
   const countResult = await pool.query("SELECT COUNT(*) AS count FROM todos");
   if (Number(countResult.rows[0].count) === 0) {
     for (const seed of SEED_TODOS) {
@@ -44,13 +45,21 @@ async function prepareTable() {
   }
 }
 async function listTodos() {
-  const result = await pool.query("SELECT id, content FROM todos ORDER BY id");
-  return result.rows.map((row) => ({ id: row.id, todo: row.content }));
+  const result = await pool.query("SELECT id, content, done FROM todos ORDER BY id");
+  return result.rows.map((row) => ({ id: row.id, todo: row.content, done: row.done }));
 }
 async function createTodo(text) {
-  const result = await pool.query("INSERT INTO todos (content) VALUES ($1) RETURNING id, content", [text]);
+  const result = await pool.query("INSERT INTO todos (content) VALUES ($1) RETURNING id, content, done", [text]);
   const row = result.rows[0];
-  return { id: row.id, todo: row.content };
+  return { id: row.id, todo: row.content, done: row.done };
+}
+async function updateTodoDone(id, done) {
+  const result = await pool.query("UPDATE todos SET done = $2 WHERE id = $1 RETURNING id, content, done", [id, done]);
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const row = result.rows[0];
+  return { id: row.id, todo: row.content, done: row.done };
 }
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -111,6 +120,47 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Invalid request: " + error.message }));
     }
+    return;
+  }
+  if (req.method === "PUT" && req.url.startsWith("/todos/")) {
+    const id = Number(req.url.slice("/todos/".length));
+    if (Number.isInteger(id) === false || id < 1) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Invalid todo id" }));
+      return;
+    }
+    const body = await readBody(req);
+    let done = null;
+    if (body !== "") {
+      try {
+        const parsed = JSON.parse(body);
+        if (parsed.done !== undefined) {
+          done = parsed.done === true;
+        }
+      } catch (error) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid request: " + error.message }));
+        return;
+      }
+    }
+    if (done === null) {
+      const current = await pool.query("SELECT done FROM todos WHERE id = $1", [id]);
+      if (current.rows.length === 0) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Todo not found" }));
+        return;
+      }
+      done = current.rows[0].done === false;
+    }
+    const updated = await updateTodoDone(id, done);
+    if (updated === null) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Todo not found" }));
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(updated));
+    console.log("PUT /todos/" + id + " -> done " + updated.done);
     return;
   }
   res.writeHead(404, { "Content-Type": "application/json" });

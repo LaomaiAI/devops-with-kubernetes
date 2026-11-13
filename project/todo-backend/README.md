@@ -26,3 +26,8 @@ Verified by running a manual Job (`kubectl create job --from=cronjob/todo-genera
 — 超過 140 個字元的待辦回 `400 {"error": "Todo too long: maximum 140 characters"}`，不會寫入資料庫。
 — 驗證（2026-11-13）：以 141 個字元的待辦 POST 到後端，回 `400`，日誌出現 `Todo rejected: too long, length 141, maximum 140, todo: xxx...`。
 — 後端日誌由 monitoring 命名空間的 Alloy 收集，經 Loki 儲存；可在 Grafana 以查詢 `{namespace="project"} |= "Todo rejected"` 查到（直接查 Loki API 時帶 `X-Scope-OrgID: 1` 標頭）。
+
+## Exercise 4.5
+待辦加 `done` 欄位（`boolean not null default false`）：建表時在 `CREATE TABLE` 加入該欄；既有表在啟動時以 `ALTER TABLE todos ADD COLUMN IF NOT EXISTS done boolean NOT NULL DEFAULT false` 遷移。`GET /todos` 與 `POST /todos` 回傳的物件含 `done`。
+新增 `PUT /todos/<id>`：body 為 `{"done": <布林值>}` 時把該待辦設為該值；沒有 body 或沒有 `done` 欄位時切換現值。id 不是數字回 `400 {"error": "Invalid todo id"}`；id 不存在回 `404 {"error": "Todo not found"}`；成功回 200 與更新後的物件。
+驗證（2026-11-13）：部署後 `GET /todos` 中既有待辦（包括種子三筆與 CronJob 產生的 Wikipedia 條目）皆為 `done: false`。`PUT /todos/1 {"done": true}` 回 200 及 `done: true`，再查 `GET /todos` 已持久化；無 body 的 `PUT /todos/1` 把它切回 `done: false`；`PUT /todos/99999` 回 404，`PUT /todos/abc` 回 400。

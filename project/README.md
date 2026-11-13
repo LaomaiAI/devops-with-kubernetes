@@ -59,3 +59,8 @@ All configuration (PORT, IMAGE_URL, IMAGE_PATH, IMAGE_CACHE_MS, TODO_BACKEND_URL
 首頁新增「Break the app」按鈕（POST /break），把 `isHealthy` 設為 false；其後 liveness 連續失敗，kubelet 會重啟容器，新進程的 `isHealthy` 回到 true，應用恢復健康。
 
 驗證（2026-11-13）：部署後 `GET /healthz` 回 200，首頁出現「Break the app」按鈕。POST /break 後回 303，`GET /healthz` 立即變 500；約 15 秒後 liveness 連續失敗，kubelet 殺掉容器並重啟，Pod 回到 1/1、RESTARTS 1，`GET /healthz` 再回 200，待辦清單完整。
+
+## Exercise 4.5
+首頁待辦清單改為由後端回傳的物件渲染：每項有 id 的待辦都顯示一個核取方塊（`type="checkbox"`，帶 `data-todo-id` 與 `onchange="toggleTodo(this)"`）；已完成的待辦文字加 `<s>` 刪除線，未完成的沒有刪除線。點選核取方塊時，前端 `toggleTodo` 以 `PUT /todos/<id>`（帶 `{"done": <勾選狀態>}`）請求後端，成功後重新載入頁面。
+前端新增 `PUT /todos/<id>` 代理：把要求轉發到 `TODO_BACKEND_URL/<id>`，原樣回傳後端的狀態碼與正文；後端連不上時回 502。
+驗證（2026-11-13）：部署後首頁的待辦都顯示核取方塊。經 Ingress（project.local）把 id 1 的待辦勾為完成，再以 port-forward 直接查後端 `GET /todos`，該項為 `done: true`，首頁該項文字出現 `<s>` 刪除線；再經代理把該項設回 `done: false`。
