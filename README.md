@@ -41,3 +41,19 @@
 - log-output/：Node.js，MODE=both / writer / reader
 - project/：Node.js，PORT 預設 3000
 - pingpong/：Node.js，計數寫入 COUNT_PATH（預設 /usr/src/app/files/pingpong.txt）
+
+## 習題連結（每題連結至該 release 的相應應用版本）
+
+- [1.1](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.1/log-output) — log-output
+- [1.2](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.2/project) — project
+- [1.3](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.3/log-output) — log-output（宣告式部署）
+- [1.4](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.4/project) — project（宣告式部署）
+- [1.5](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.5/project) — project（HTML）
+- [1.6](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.6/project) — project（NodePort）
+- [1.7](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.7/log-output) — log-output（Ingress）
+- [1.8](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.8/project) — project（Ingress）
+- [1.9](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.9/pingpong) — pingpong
+- [1.10](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.10/log-output) — log-output（雙容器）
+- [1.11](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.11/log-output) — log-output（共享 PVC，另見 pingpong）
+- [1.12](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.12/project) — project（每小時圖片）
+- [1.13](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.13/project) — project（待辦清單）
