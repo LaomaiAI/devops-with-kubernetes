@@ -31,3 +31,11 @@ helm upgrade --install grafana grafana/grafana --namespace monitoring --values m
 — Prometheus 查詢 `count(kube_pod_info)` 回 34。
 
 注意：圖表版本行為——`prom-values.yaml` 雖停用 Pushgateway，圖表仍建立並運行 `prom-prometheus-pushgateway`；不影響監控功能。
+
+## Exercise 4.3
+
+4.3 的答案是 Prometheus 查詢字串（不是倉庫連結）。Prometheus 經 port-forward 暴露：`kubectl port-forward svc/prom-prometheus-server -n monitoring 9090:80`，再於 http://localhost:9090 查詢。
+
+查詢：`count(kube_pod_info{created_by_kind="StatefulSet", namespace="monitoring"})`
+
+驗證（2026-11-13）：該查詢回 `3`，即 monitoring 命名空間內三個 StatefulSet Pod：`loki-0`、`loki-chunks-cache-0`、`loki-results-cache-0`。不加命名空間篩選時總數為 5（另外兩個是 exercises 的 `pingpong-db-0` 與 project 的 `todo-db-0`），故命名空間篩選不可少。題目所說的「prometheus namespace」即 Prometheus 所在的 monitoring 命名空間。
