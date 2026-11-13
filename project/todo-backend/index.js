@@ -21,7 +21,7 @@ const pool = new Pool({
   database: PGDATABASE,
 });
 const NATS_URL = process.env.NATS_URL || "nats://my-nats.nats.svc.cluster.local:4222";
-const NATS_SUBJECT = "todos";
+const NATS_SUBJECT = process.env.NATS_SUBJECT || "todos";
 const natsCodec = StringCodec();
 let natsConnection = null;
 
