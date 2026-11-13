@@ -1,5 +1,7 @@
 const http = require("http");
 const { Pool } = require("pg");
+const { connect: connectNats, StringCodec } = require("nats");
+const crypto = require("crypto");
 const PORT = Number(process.env.PORT);
 const PGHOST = process.env.PGHOST;
 const PGPORT = Number(process.env.PGPORT);
@@ -18,6 +20,48 @@ const pool = new Pool({
   password: PGPASSWORD,
   database: PGDATABASE,
 });
+const NATS_URL = process.env.NATS_URL || "nats://my-nats.nats.svc.cluster.local:4222";
+const NATS_SUBJECT = "todos";
+const natsCodec = StringCodec();
+let natsConnection = null;
+
+async function connectNatsWithRetry() {
+  while (natsConnection === null) {
+    try {
+      natsConnection = await connectNats({ servers: NATS_URL });
+      console.log("Connected to NATS at " + NATS_URL);
+      natsConnection.closed().then(() => {
+        console.log("NATS connection closed, reconnecting");
+        natsConnection = null;
+        connectNatsWithRetry();
+      });
+    } catch (err) {
+      console.error("Failed to connect to NATS, retrying in 2 seconds:", err.message);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+}
+
+function publishTodoEvent(event, todo) {
+  if (natsConnection === null) {
+    console.log("NATS not connected, skipping publish for " + event + " todo " + todo.id);
+    return;
+  }
+  const message = {
+    messageId: crypto.randomUUID(),
+    event: event,
+    id: todo.id,
+    todo: todo.todo,
+    done: todo.done,
+    at: new Date().toISOString(),
+  };
+  try {
+    natsConnection.publish(NATS_SUBJECT, natsCodec.encode(JSON.stringify(message)));
+    console.log("Published to NATS " + event + " todo " + todo.id + " message " + message.messageId);
+  } catch (err) {
+    console.error("Failed to publish to NATS:", err.message);
+  }
+}
 const SEED_TODOS = ["Learn Kubernetes", "Learn Docker", "Complete exercise 1.13"];
 async function waitForDatabase() {
   for (let attempt = 1; attempt <= 30; attempt++) {
@@ -113,6 +157,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const created = await createTodo(text);
+    publishTodoEvent("created", created);
       res.writeHead(201, { "Content-Type": "application/json" });
       res.end(JSON.stringify(created));
       console.log("POST /todos -> created todo " + created.id + ": " + created.todo);
@@ -153,6 +198,7 @@ const server = http.createServer(async (req, res) => {
       done = current.rows[0].done === false;
     }
     const updated = await updateTodoDone(id, done);
+    publishTodoEvent("updated", updated);
     if (updated === null) {
       res.writeHead(404, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Todo not found" }));
@@ -167,6 +213,7 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify({ error: "Not found" }));
 });
 waitForDatabase().then(() => prepareTable()).then(() => {
+    connectNatsWithRetry();
   server.listen(PORT, () => console.log("Server started in port " + PORT));
 }).catch((error) => {
   console.error("Failed to start: " + error.message);
