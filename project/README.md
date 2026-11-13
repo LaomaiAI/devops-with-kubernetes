@@ -89,3 +89,11 @@ All configuration (PORT, IMAGE_URL, IMAGE_PATH, IMAGE_CACHE_MS, TODO_BACKEND_URL
 - NATS 隔離（2026-11-13）：兩個環境起初共用主題 todos 與佇列組 broadcaster，staging 待辦被 production broadcaster 轉發到 production receiver；反之 production 訊息亦可能被 log-only 的 staging broadcaster 搶走而遺失。現 staging 兩個 ConfigMap 設 NATS_SUBJECT=todos-staging，production 保持 todos。期間發現 todo-backend 原本把主題寫死為 NATS_SUBJECT = "todos"，不讀環境變數，已改為 process.env.NATS_SUBJECT || "todos"、重建映像（docker build -t todo-backend:latest + k3d image import）並重啟兩個命名空間的 Deployment；broadcaster 本來就會讀此環境變數。映像標籤不變時 ArgoCD 不會重新部署，須手動重啟。
 - 備份驗證（2026-11-13 22:58-23:04 UTC）：local-path StorageClass 的 volumeBindingMode 是 WaitForFirstConsumer，所以 todo-db-backup PVC 在首個使用它的 Pod 出現前保持 Pending。手動觸發備份 Job（kubectl -n project create job --from=cronjob/todo-db-backup todo-db-backup-manual-1）11 秒內完成，PVC 隨即 Bound（PV pvc-6e9951d1-d750-4ed7-9333-0b8e1d2b70d3，1Gi）；節點磁碟上有真實 dump 檔 todo-db-backup.sql（3231 字節，檔頭為 PostgreSQL database dump）。local-path 卷目錄命名為 <PV名>_<命名空間>_<PVC名>。
 - Kustomize 教訓：staging kustomization.yaml 的 inline Ingress JSON patch（patch: |-）必須是最後一個補丁條目，否則 YAML 解析失敗（PyYAML 與 kustomize 皆報錯）；補丁目標須用清單原有命名空間，見上方實作要點。
+
+## Exercise 4.10
+
+- 程式碼與部署設定分倉：部署設定（ArgoCD Application、Kubernetes 清單、Kustomize base 與 overlays）已移至新倉庫 https://github.com/LaomaiAI/devops-with-kubernetes-config；程式碼（Node.js 應用、Dockerfile、CI）留在本倉庫。
+- Application 改動：三個 Application（log-output、project-staging、project-production）的 repoURL 全部改為設定倉庫；project-production 的 targetRevision 由 4.9 改為 4.10；staging 與 log-output 仍跟隨 HEAD。
+- 集群已切換：以設定倉庫的清單執行 kubectl apply -f argocd/，三個 Application 全部 Synced；staging 與 production 皆 Healthy；部署副本未受影響（production project 3/3、staging project 1/1）。log-output 仍為 Progressing（既有狀態，Deployment 0/1 就緒，原因未查）。
+- kubectl apply -f argocd/ 與密鑰套用改由設定倉庫執行：Application 清單見設定倉庫 argocd/；todo-db-secret.yaml 仍在 ArgoCD 管理之外，以 kubectl 直接套用設定倉庫內的 project/todo-backend/manifests/todo-db-secret.yaml。
+- 本節以上（4.8／4.9）所述的清單路徑，現指設定倉庫內的相同路徑。
