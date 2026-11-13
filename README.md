@@ -85,3 +85,18 @@
 - [2.8](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.8) – Postgres（待辦）
 - [2.9](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.9) – CronJob todo-generator
 - [2.10](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.10) – 請求記錄、140 字元上限與監控
+
+## Part 3（Chapter 4）練習
+
+- 3.3 Log output 與 Ping pong 改以 Gateway API 暴露（k3d + Envoy Gateway，Gateway 專用集群），不再用 Ingress
+- 3.4 Ping pong 移除 `/pingpong` 路由，路徑重寫由集群層負責（Gateway：HTTPRoute URLRewrite；主集群：Traefik Middleware stripPrefix）
+- 3.9 DBaaS（Google Cloud SQL）與自行架設 Postgres 的優缺點比較，寫進 project README（初始化工作與成本、維護、備份）
+- 3.11 為專案設定資源 requests 與 limits（以 kubectl top pods 量度）
+- 未完成：3.1、3.2、3.5、3.6、3.7、3.8、3.10、3.12 須用 GKE（Google Cloud 試用須綁卡），未開通，故未做
+
+## 習題連結（Chapter 4：每題連結至該 release）
+
+- [3.3](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.3) - Gateway API（Envoy Gateway）
+- [3.4](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.4) - 路由重寫
+- [3.9](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.9) - DBaaS 與自行架設比較
+- [3.11](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.11) - 資源 requests 與 limits
