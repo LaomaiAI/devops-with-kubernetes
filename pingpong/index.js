@@ -17,19 +17,20 @@ const pool = new Pool({
   password: PGPASSWORD,
   database: PGDATABASE,
 });
+pool.on("error", (error) => {
+  console.error("Idle Postgres client error: " + error.message);
+});
 async function waitForDatabase() {
-  for (let attempt = 1; attempt <= 30; attempt++) {
+  for (let attempt = 1; ; attempt++) {
     try {
       await pool.query("SELECT 1");
       console.log("Connected to Postgres at " + PGHOST + ":" + PGPORT);
       return;
     } catch (error) {
-      console.log("Waiting for Postgres (attempt " + attempt + " of 30): " + error.message);
+      console.log("Waiting for Postgres (attempt " + attempt + "): " + error.message);
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
-  console.error("Could not connect to Postgres after 30 attempts");
-  process.exit(1);
 }
 async function prepareTable() {
   await pool.query("CREATE TABLE IF NOT EXISTS pongs (id integer primary key, count integer not null default 0)");
@@ -48,14 +49,30 @@ async function currentCount() {
 }
 const server = http.createServer(async (req, res) => {
   if (req.url === "/") {
-    const pong = await nextPong();
+    let pong;
+    try {
+      pong = await nextPong();
+    } catch (error) {
+      console.error("Database error: " + error.message);
+      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.end("Database unavailable");
+      return;
+    }
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("pong " + pong);
     console.log("GET " + req.url + " -> pong " + pong);
     return;
   }
   if (req.url === "/count") {
-    const count = await currentCount();
+    let count;
+    try {
+      count = await currentCount();
+    } catch (error) {
+      console.error("Database error: " + error.message);
+      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.end("Database unavailable");
+      return;
+    }
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end(String(count));
     console.log("GET /count -> " + count);
@@ -64,9 +81,9 @@ const server = http.createServer(async (req, res) => {
   res.writeHead(404, { "Content-Type": "text/plain" });
   res.end("Not found");
 });
+server.listen(PORT, () => console.log("Server started in port " + PORT));
 waitForDatabase().then(() => prepareTable()).then(() => {
-  server.listen(PORT, () => console.log("Server started in port " + PORT));
+  console.log("Database ready");
 }).catch((error) => {
-  console.error("Failed to start: " + error.message);
-  process.exit(1);
+  console.error("Failed to set up the database: " + error.message);
 });

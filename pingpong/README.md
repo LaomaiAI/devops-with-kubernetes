@@ -21,3 +21,11 @@ Ping pong 不再回應 `/pingpong`，只回應 `/`（與 `/count`）。應用不
 驗證（2026-11-13）：
 - Gateway：`curl http://localhost:8083/pingpong` 回 `pong 2`，首頁顯示 `Ping / Pongs: 3`。
 - 主集群：經 Traefik（logoutput.local）的 `/pingpong` 回 `pong 4`，首頁顯示 `Ping / Pongs: 5`。
+
+## Exercise 4.1
+
+Readiness probe：deployment 的 readinessProbe 以 HTTP GET 檢查 `/count`（port 3000，initialDelaySeconds 5、periodSeconds 5、timeoutSeconds 5）。只有與 Postgres 連線正常時，`/count` 才回 200，Pod 標示為 Ready；資料庫未就緒時，`/count` 回 500，Pod 保持 0/1。
+
+為配合探針，啟動流程改為先監聽 HTTP，再在背景無限重試連接資料庫（以往最多 30 次後退出）；資料庫中途斷線時，`GET /` 與 `GET /count` 的查詢失敗回 500，不再令進程崩潰；另加 `pool.on("error", ...)` 監聽，避免連接池閒置客戶端斷線時觸發未處理事件導致進程退出。
+
+驗證（2026-11-13）：`pingpong-db` 縮至 0 副本時，kubectl get pods 顯示 log-output 1/2、pingpong 0/1（Running，0 次重啟）；恢復至 1 副本後，自動回到 log-output 2/2、pingpong 1/1。計數保存在 PVC，恢復後主集群 `/pingpong` 回 `pong 5`，首頁顯示 `Ping / Pongs: 6`。

@@ -19,6 +19,13 @@ spec:
         - name: pingpong
           image: pingpong:latest
           imagePullPolicy: Never
+          readinessProbe:
+            httpGet:
+              path: /count
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
           ports:
             - containerPort: 3000
           envFrom:

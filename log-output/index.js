@@ -47,6 +47,19 @@ if (MODE === "writer" || MODE === "both") {
 }
 if (MODE === "reader" || MODE === "both") {
   const server = http.createServer(async (req, res) => {
+    if (req.url === "/healthz") {
+      const count = await fetchPingCount();
+      if (count === null) {
+        res.writeHead(500, { "Content-Type": "text/plain" });
+        res.end("Ping-pong unavailable");
+        console.log("GET /healthz -> 500");
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "text/plain" });
+      res.end("OK");
+      console.log("GET /healthz -> 200");
+      return;
+    }
     const lines = [];
     if (INFO_FILE_PATH !== "") {
       try {
