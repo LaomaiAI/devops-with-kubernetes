@@ -1,0 +1,9 @@
+{
+  "name": "dummysite-controller",
+  "version": "1.0.0",
+  "description": "Controller for DummySite: creates a Deployment, Service and Ingress serving a copy of the website in spec.website_url.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}

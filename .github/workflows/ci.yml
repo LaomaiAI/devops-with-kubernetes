@@ -15,6 +15,6 @@ jobs:
         with:
           node-version: 24
       - name: Check JavaScript syntax
-        run: node --check log-output/index.js && node --check project/index.js && node --check pingpong/index.js && node --check project/todo-backend/index.js && node --check project/broadcaster/index.js && node --check project/message-receiver/index.js
+        run: node --check log-output/index.js && node --check project/index.js && node --check pingpong/index.js && node --check project/todo-backend/index.js && node --check project/broadcaster/index.js && node --check project/message-receiver/index.js && node --check dummysite-controller/index.js
       - name: Build Docker images
-        run: docker build -t log-output:test log-output && docker build -t project:test project && docker build -t pingpong:test pingpong && docker build -t todo-backend:test project/todo-backend && docker build -t broadcaster:test project/broadcaster && docker build -t message-receiver:test project/message-receiver
+        run: docker build -t log-output:test log-output && docker build -t project:test project && docker build -t pingpong:test pingpong && docker build -t todo-backend:test project/todo-backend && docker build -t broadcaster:test project/broadcaster && docker build -t message-receiver:test project/message-receiver && docker build -t dummysite-controller:test dummysite-controller
