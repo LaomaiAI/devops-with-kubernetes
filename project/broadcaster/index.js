@@ -6,6 +6,7 @@ const NATS_URL = process.env.NATS_URL || "nats://my-nats.nats.svc.cluster.local:
 const NATS_SUBJECT = process.env.NATS_SUBJECT || "todos";
 const NATS_QUEUE = process.env.NATS_QUEUE || "broadcaster";
 const BROADCAST_URL = process.env.BROADCAST_URL || "http://message-receiver/";
+const FORWARD_ENABLED = process.env.FORWARD_ENABLED === "false" ? false : true;
 const natsCodec = StringCodec();
 let natsConnection = null;
 let natsReady = false;
@@ -17,6 +18,10 @@ function formatMessage(data) {
 }
 
 async function forward(data) {
+  if (FORWARD_ENABLED === false) {
+    console.log("Forwarding disabled (log-only mode): " + JSON.stringify(data));
+    return;
+  }
   const payload = {
     user: "bot",
     messageId: data.messageId || "unknown",

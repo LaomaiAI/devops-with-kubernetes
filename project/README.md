@@ -2,7 +2,7 @@
 課程主應用：Web 伺服器，啟動時輸出 Server started in port 3000；GET / 回應 HTML 頁面，內含每小時圖片與待辦清單。
 每小時圖片：從 https://picsum.photos/1200 抓取，儲存於持久卷（project-files），10 分鐘內重用同一圖片，經 /image.jpg 提供。
 待辦：輸入框上限 140 字、Send 按鈕，表單 POST /todos 後由 project 轉發至 todo-backend（GET/POST /todos），頁面顯示後端待辦，後端初始三筆待辦（2.2）。
-部署：docker build -t project:latest .；k3d image import project:latest -c k3s-default；kubectl apply -f manifests/。
+部署：docker build -t project:latest .；k3d image import project:latest -c k3s-default；kubectl apply -k manifests/。
 Ingress：project.local，路徑 /。
 
 ## Exercise 2.6
@@ -74,3 +74,14 @@ All configuration (PORT, IMAGE_URL, IMAGE_PATH, IMAGE_CACHE_MS, TODO_BACKEND_URL
 - 修正（2026-11-13）：Application 初版的 directory.exclude 只寫 **/*.json，ArgoCD 仍把 project/package.json 當作清單解析，導致同步狀態長期維持 Unknown、條件為 ComparisonError: object 'Kind' is missing；改為 {*.json,**/*.json} 後重新套用 Application 並強制刷新，狀態變為 Synced / Healthy。
 - 驗證（2026-11-13 約 22:04 UTC）：kubectl -n argocd get applications.argoproj.io 顯示 project Synced Healthy、log-output Synced；線上 Deployment project 的註釋含 gitops: "true"。
 - 同日集群曾出現 I/O 風暴（2 核負載逾 50、kubectl 間歇超時、ArgoCD 元件重啟），經重啟 Codespace 並啟動 k3d 集群後緩解；為減輕負載，監控堆疊（Prometheus、Loki、Grafana、Alloy）暫時縮減至 0 副本，見主 README。
+
+## Exercise 4.9
+
+以 Kustomize base 加 overlays 管理 project 應用，配合兩個 ArgoCD Application 分開部署 staging 與 production。
+
+- Base：project/kustomization.yaml，聚合四個元件清單目錄（主程式、broadcaster、message-receiver、todo-backend）。各元件目錄另有自己的 kustomization.yaml，只列出該目錄的檔案；命名空間清單與密鑰不在 base 內。
+- Staging（project/overlays/staging）：命名空間 project-staging、Ingress 主機名 staging.project.local；broadcaster 經補丁加入環境變數 FORWARD_ENABLED=false，只記錄訊息、不轉發。
+- Production（project/overlays/production）：命名空間 project；主程式 Deployment 3 個副本；每日 02:00 以 CronJob todo-db-backup 把 todo-db（Postgres）備份到 PVC todo-db-backup。
+- 部署流程：每個 main 提交由 project-staging Application（targetRevision HEAD）同步到 staging；每個 tag 由 project-production Application（targetRevision 4.9）同步到 production（見 argocd/）。
+- 密鑰：todo-db-secret.yaml 不在 GitOps 管理的清單內，須在集群外另行套用至兩個命名空間（staging 以 kubectl -n project-staging apply -f project/todo-backend/manifests/todo-db-secret.yaml），否則 todo-db 無法啟動。
+- 實作要點（2026-11-13）：Kustomize 的補丁在命名空間轉換前評估，補丁目標須用清單原有的命名空間 project（不是 overlay 的 project-staging），否則補丁無聲失效；另因 kubectl apply -f manifests/ 會嘗試套用目錄內的 kustomization.yaml 而失敗，手動部署改用 kubectl apply -k manifests/。broadcaster 程式新增 FORWARD_ENABLED 開關（預設轉發），映像已重建並匯入 k3d。
