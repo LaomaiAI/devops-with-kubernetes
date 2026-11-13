@@ -47,7 +47,7 @@ async function currentCount() {
   return result.rows[0].count;
 }
 const server = http.createServer(async (req, res) => {
-  if (req.url === "/" || req.url === "/pingpong") {
+  if (req.url === "/") {
     const pong = await nextPong();
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("pong " + pong);

@@ -11,3 +11,13 @@ Connection settings come from the ConfigMap `pingpong-config` and the password f
 The app creates the `pongs` table on startup (if needed), waits up to 30 seconds for the database, and increments the counter atomically with `UPDATE ... RETURNING`.
 
 Note: the Postgres image is pulled from Docker Hub by the kubelet (imagePullPolicy: IfNotPresent). Importing this multi-architecture image with `k3d image import` fails in this environment (every node reports a missing content digest), so it is not pre-loaded into the nodes.
+
+## Exercise 3.4
+
+Ping pong 不再回應 `/pingpong`，只回應 `/`（與 `/count`）。應用不再反映集群層級的 URL 結構；路徑重寫由集群層負責：
+- Gateway 集群：HTTPRoute 的 `/pingpong` 規則加 `URLRewrite` filter（`ReplacePrefixMatch: /`），把 `/pingpong` 重寫為 `/`（見 `gateway/manifests/route.yaml`）。
+- 主集群：Traefik Middleware `pingpong-strip-prefix`（`stripPrefix: /pingpong`），經 Ingress 註解掛接（見 `log-output/manifests/middleware.yaml` 與 `ingress.yaml`）。
+
+驗證（2026-11-13）：
+- Gateway：`curl http://localhost:8083/pingpong` 回 `pong 2`，首頁顯示 `Ping / Pongs: 3`。
+- 主集群：經 Traefik（logoutput.local）的 `/pingpong` 回 `pong 4`，首頁顯示 `Ping / Pongs: 5`。

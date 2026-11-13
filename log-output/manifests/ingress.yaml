@@ -3,6 +3,8 @@ kind: Ingress
 metadata:
   name: log-output
   namespace: exercises
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: exercises-pingpong-strip-prefix@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:

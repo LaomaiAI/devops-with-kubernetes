@@ -33,3 +33,7 @@ GatewayClass（安裝清單不會建立，需自行建立）：
 - Gateway `my-gateway` 狀態 PROGRAMMED True，ADDRESS 172.19.0.3；GatewayClass `eg` ACCEPTED True。
 - Envoy 代理位於 `envoy-gateway-system` 命名空間（`envoy-exercises-my-gateway-*`，LoadBalancer 服務）。
 - `curl http://localhost:8083/` 回 log-output 輸出（`Ping / Pongs: 0`）；`curl http://localhost:8083/pingpong` 回 `pong 0`；再請求一次後回 `pong 1`，首頁顯示 `Ping / Pongs: 2`。
+
+## 練習 3.4（重寫路由）
+
+HTTPRoute 的 `/pingpong` 規則加 `URLRewrite` filter（`ReplacePrefixMatch: /`），把 `/pingpong` 重寫為 `/`，令應用只需回應 `/`。Ping pong 應用已移除 `/pingpong` 路由。驗證（2026-11-13）：`curl http://localhost:8083/pingpong` 回 `pong 2`，首頁顯示 `Ping / Pongs: 3`。主集群的對等做法見 `log-output/README.md`（Traefik Middleware）。
