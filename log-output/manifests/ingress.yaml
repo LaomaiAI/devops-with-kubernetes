@@ -8,6 +8,13 @@ spec:
     - host: logoutput.local
       http:
         paths:
+          - path: /pingpong
+            pathType: Prefix
+            backend:
+              service:
+                name: pingpong
+                port:
+                  number: 80
           - path: /
             pathType: Prefix
             backend:
