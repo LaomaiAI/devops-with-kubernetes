@@ -1,12 +1,16 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const PORT = Number(process.env.PORT || "3000");
-const IMAGE_PATH = process.env.IMAGE_PATH || "/usr/src/app/files/image.jpg";
-const CACHE_MS = parseInt(process.env.IMAGE_CACHE_MS || "600000", 10);
-const IMAGE_URL = process.env.IMAGE_URL || "https://picsum.photos/1200";
-const TODO_BACKEND_URL = process.env.TODO_BACKEND_URL || "http://todo-backend/todos";
+const PORT = Number(process.env.PORT);
+const IMAGE_PATH = process.env.IMAGE_PATH;
+const CACHE_MS = parseInt(process.env.IMAGE_CACHE_MS, 10);
+const IMAGE_URL = process.env.IMAGE_URL;
+const TODO_BACKEND_URL = process.env.TODO_BACKEND_URL;
 const FALLBACK_TODOS = ["Learn Kubernetes", "Learn Docker", "Complete exercise 1.13"];
+if (PORT < 1 || Number.isNaN(CACHE_MS) || IMAGE_PATH === undefined || IMAGE_PATH === '' || IMAGE_URL === undefined || IMAGE_URL === '' || TODO_BACKEND_URL === undefined || TODO_BACKEND_URL === '') {
+  console.error('PORT, IMAGE_PATH, IMAGE_CACHE_MS, IMAGE_URL and TODO_BACKEND_URL environment variables are required');
+  process.exit(1);
+}
 function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -67,7 +71,7 @@ const server = http.createServer(async (req, res) => {
       const todoText = String(form.get("todo") || "").trim();
       if (todoText !== "") {
         const backend = await fetch(TODO_BACKEND_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ todo: todoText }) });
-        console.log("POST /todos -> todo-backend " + backend.status + " " + todoText);
+        console.log("POST /todos -> " + TODO_BACKEND_URL + " " + backend.status + " " + todoText);
       }
     } catch (err) {
       console.error(err);

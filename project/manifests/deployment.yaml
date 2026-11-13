@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: project
   namespace: project
+  labels:
+    app: project
 spec:
   replicas: 1
   selector:
@@ -19,15 +21,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
-          env:
-            - name: PORT
-              value: "3000"
-            - name: IMAGE_PATH
-              value: "/usr/src/app/files/image.jpg"
-            - name: IMAGE_CACHE_MS
-              value: "600000"
-            - name: TODO_BACKEND_URL
-              value: http://todo-backend/todos
+          envFrom:
+            - configMapRef:
+                name: project-config
           volumeMounts:
             - name: project-files
               mountPath: /usr/src/app/files
