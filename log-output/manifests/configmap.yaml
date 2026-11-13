@@ -6,6 +6,6 @@ metadata:
   labels:
     app: log-output
 data:
-  MESSAGE: hello world
+  MESSAGE: hello world (GitOps)
   information.txt: |
     this text is from file
