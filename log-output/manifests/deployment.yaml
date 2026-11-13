@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: log-output
+  labels:
+    app: log-output
 spec:
   replicas: 1
   selector:
@@ -12,32 +14,37 @@ spec:
       labels:
         app: log-output
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: k3d-k3s-default-agent-0
       containers:
         - name: log-output-writer
           image: log-output:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           env:
+            - name: PORT
+              value: "3000"
             - name: MODE
-              value: "writer"
+              value: writer
+            - name: FILE_PATH
+              value: /usr/src/app/files/log.txt
           volumeMounts:
             - name: shared-files
               mountPath: /usr/src/app/files
         - name: log-output-reader
           image: log-output:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           env:
-            - name: MODE
-              value: "reader"
             - name: PORT
               value: "3000"
+            - name: MODE
+              value: reader
+            - name: FILE_PATH
+              value: /usr/src/app/files/log.txt
+            - name: PINGPONG_URL
+              value: http://pingpong/count
           volumeMounts:
             - name: shared-files
               mountPath: /usr/src/app/files
       volumes:
         - name: shared-files
-          persistentVolumeClaim:
-            claimName: shared-files
+          emptyDir: {}

@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pingpong
+  labels:
+    app: pingpong
 spec:
   replicas: 1
   selector:
@@ -12,23 +14,12 @@ spec:
       labels:
         app: pingpong
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: k3d-k3s-default-agent-0
       containers:
         - name: pingpong
           image: pingpong:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           env:
             - name: PORT
               value: "3000"
-            - name: COUNT_PATH
-              value: "/usr/src/app/files/pingpong.txt"
-          volumeMounts:
-            - name: shared-files
-              mountPath: /usr/src/app/files
-      volumes:
-        - name: shared-files
-          persistentVolumeClaim:
-            claimName: shared-files
