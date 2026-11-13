@@ -1,0 +1,24 @@
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+loki:
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem
+  useTestSchema: true
+
+# chunksCache: the chart default allocates 8192 MB to the memcached cache,
+# which is more memory than any node has in this 3-node k3d cluster,
+# so the chunks-cache pod can never be scheduled. Reduced for this cluster.
+chunksCache:
+  allocatedMemory: 128

@@ -17,3 +17,12 @@ Note: the Postgres image is pulled from Docker Hub by the kubelet (`imagePullPol
 
 A CronJob (`todo-generator`, schedule `0 * * * *`) creates a new todo every hour: `Read <URL>` with a random Wikipedia article URL. It requests `https://en.wikipedia.org/wiki/Special:Random` and uses the `location` header of the redirect (adding the `https:` scheme when it is protocol-relative), then POSTs the todo to the backend. The job uses the `curlimages/curl` image (pulled from Docker Hub by the kubelet, `imagePullPolicy: IfNotPresent`).
 Verified by running a manual Job (`kubectl create job --from=cronjob/todo-generator`): it created the todo `Read https://en.wikipedia.org/wiki/H%C3%A9jek_(surname)`.
+
+## Exercise 2.10
+
+後端記錄每個請求，並限制待辦長度上限為 140 個字元。
+— `GET /todos` 記錄回傳的待辦數量。
+— `POST /todos` 記錄建立的待辦（id 與內容）；空內容或超長內容則記錄拒絕原因。
+— 超過 140 個字元的待辦回 `400 {"error": "Todo too long: maximum 140 characters"}`，不會寫入資料庫。
+— 驗證（2026-11-13）：以 141 個字元的待辦 POST 到後端，回 `400`，日誌出現 `Todo rejected: too long, length 141, maximum 140, todo: xxx...`。
+— 後端日誌由 monitoring 命名空間的 Alloy 收集，經 Loki 儲存；可在 Grafana 以查詢 `{namespace="project"} |= "Todo rejected"` 查到（直接查 Loki API 時帶 `X-Scope-OrgID: 1` 標頭）。

@@ -33,6 +33,8 @@
 ## 已知限制：1.12 圖片來源
 
 - 2026-11-13 在此 Codespace 測試時，picsum.photos 完全無法連通（宿主 curl 回傳 000、Pod 內 fetch 回傳 522），其他圖片網站（如 Google 標誌）可正常下載。
+- 2026-11-13 約 13:12 UTC（集群重建後，default 命名空間）重新請求 /image.jpg 仍為 503（Image unavailable），PVC 內 /usr/src/app/files/ 為空（total 0）。
+- 2026-11-13 約 13:49 UTC（移入 project 命名空間後）再次複查：/image.jpg 仍為 503，PVC 仍為空。代碼未改。
 - 程式預設仍按課程要求抓取 https://picsum.photos/1200，抓取失敗時回 503；快取邏輯已在本地以可用的圖片 URL 驗證：兩次請求檔案大小同為 13504 字節、MD5 完全相同。
 - 待 picsum 恢復後，只需重新請求 /image.jpg 即可取得圖片並寫入 PVC。
 
@@ -57,3 +59,29 @@
 - [1.11](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.11/log-output) — log-output（共享 PVC，另見 pingpong）
 - [1.12](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.12/project) — project（每小時圖片）
 - [1.13](https://github.com/LaomaiAI/devops-with-kubernetes/tree/1.13/project) — project（待辦清單）
+
+## Part 2（Chapter 3）練習
+
+- 2.1 Log output 與 Ping pong 改以 HTTP 溝通（PINGPONG_URL），計數不再共用檔案；Ping pong 計數改為記憶體計數
+- 2.2 新增 todo-backend（記憶體待辦），project 首頁表單經 POST /todos 轉發後端
+- 2.3 Log output 與 Ping pong 移入命名空間 exercises
+- 2.4 project 與 todo-backend 移入命名空間 project
+- 2.5 Log output 經 ConfigMap 傳入 MESSAGE 與 information.txt
+- 2.6 project 與 todo-backend 的設定全部改由 ConfigMap（環境變數）傳入，移除寫死設定
+- 2.7 Ping pong 計數存入 Postgres（StatefulSet pingpong-db），刪除 Pod 後計數仍存活
+- 2.8 待辦存入 Postgres（StatefulSet todo-db），刪除 todo-backend Pod 後待辦仍存活
+- 2.9 新增 CronJob todo-generator（每小時），從 Wikipedia 隨機條目產生待辦
+- 2.10 todo-backend 加入請求記錄與 140 字元上限（超長回 400）；以 Helm 安裝 Prometheus、Loki、k8smon（Alloy）與 Grafana，拒絕記錄可在 Grafana／Loki 查到
+
+## 習題連結（Chapter 3：每題連結至該 release）
+
+- [2.1](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.1) – Log output 與 Ping pong 以 HTTP 溝通
+- [2.2](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.2) – todo-backend（記憶體待辦）
+- [2.3](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.3) – 命名空間 exercises
+- [2.4](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.4) – 命名空間 project
+- [2.5](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.5) – ConfigMap（Log output）
+- [2.6](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.6) – ConfigMap（project 與 todo-backend）
+- [2.7](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.7) – Postgres（Ping pong 計數）
+- [2.8](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.8) – Postgres（待辦）
+- [2.9](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.9) – CronJob todo-generator
+- [2.10](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/2.10) – 請求記錄、140 字元上限與監控

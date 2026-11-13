@@ -10,6 +10,7 @@ if (PORT < 1 || PGHOST === undefined || PGHOST === "" || PGPORT < 1 || PGUSER ==
   console.error("PORT, PGHOST, PGPORT, PGUSER, PGPASSWORD and PGDATABASE environment variables are required");
   process.exit(1);
 }
+const MAX_TODO_LENGTH = 140;
 const pool = new Pool({
   host: PGHOST,
   port: PGPORT,
@@ -94,6 +95,12 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Todo text is required" }));
         console.log("POST /todos -> rejected empty todo");
+        return;
+      }
+      if (text.length > MAX_TODO_LENGTH) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Todo too long: maximum 140 characters" }));
+        console.log("Todo rejected: too long, length " + text.length + ", maximum " + MAX_TODO_LENGTH + ", todo: " + text);
         return;
       }
       const created = await createTodo(text);
