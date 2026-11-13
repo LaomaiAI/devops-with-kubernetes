@@ -39,4 +39,5 @@ spec:
               mountPath: /usr/src/app/files
       volumes:
         - name: shared-files
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: shared-files
