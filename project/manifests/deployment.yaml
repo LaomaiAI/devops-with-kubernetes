@@ -5,6 +5,8 @@ metadata:
   namespace: project
   labels:
     app: project
+  annotations:
+    gitops: "true"
 spec:
   replicas: 1
   selector:
