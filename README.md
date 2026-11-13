@@ -26,7 +26,7 @@
 - 1.7 Log output 端點 + Ingress；1.8 Project Ingress
 - 1.9 Ping-pong：回應 pong 0、pong 1、pong 2，與 log-output 共用 Ingress（路徑 /pingpong）
 - 1.10 Log output 拆為 writer / reader 兩個容器，共用 emptyDir 卷
-- 1.11 以 PVC（local-path，100Mi，ReadWriteOnce）共享 ping-pong 計數，log-output 顯示 Ping / Pongs: N；刪除 ping-pong Pod 後計數由 3 繼續
+- 1.11 以 PVC（local-path，100Mi，ReadWriteOnce）共享 ping-pong 計數，log-output 顯示 .Ping/ Pongs:N；刪除 ping-pong Pod 後計數由 3 繼續
 - 1.12 Project 每小時圖片：從 https://picsum.photos/1200 抓取，快取於 PVC（project-files）10 分鐘，經 /image.jpg 提供
 - 1.13 Project 待辦：輸入框上限 140 字、Send 按鈕、硬編待辦清單
 
