@@ -15,13 +15,13 @@
 - GitHub Codespace（免費額度內使用），未使用付費雲服務、未綁定信用卡、未註冊新帳戶
 - 本地集群：k3d（k3s v1.35.5）+ kubectl v1.37.2 + Docker 29.9.2
 - 建立集群：k3d cluster create --port 8080:80@loadbalancer --port 8081:80@loadbalancer --agents 2
-- Ingress：k3s 內置 Traefik（ingressClassName: traefik），主機名 project.local / logoutput.local，經 localhost:8080 測試
+- Ingress：k3s 內置 Traefik（ingressClassName: traefik），主機名 project.local / logoutput.local，經 localhost:8080（k3d 以 --port 8080:80@loadbalancer 映射）80 測試
 
 ## Part 1（Chapter 2）練習
 
 - 1.1 Log output：啟動時產生隨機字串，每 5 秒輸出時間戳 + 字串（kubectl logs 驗證）
-- 1.2/1.4 Project：Web 伺服器輸出 Server started in port 3000，部署清單在 project/manifests/deployment.yaml
-- 1.3 Log output 宣告式部署：log-output/manifests/deployment.yaml
+- 1.2/1.4 Project：Web 伺服器輸出 Server started in port 3000，部署清單在設定倉庫 project/manifests/deployment.yaml
+- 1.3 Log output 宣告式部署：設定倉庫 log-output/manifests/deployment.yaml
 - 1.5 Project 回應 HTML；1.6 Project NodePort 服務（已於 1.8 改為 ClusterIP + Ingress）
 - 1.7 Log output 端點 + Ingress；1.8 Project Ingress
 - 1.9 Ping-pong：回應 pong 0、pong 1、pong 2，與 log-output 共用 Ingress（路徑 /pingpong）
@@ -88,7 +88,7 @@
 
 ## Part 3（Chapter 4）練習
 
-- 3.3 Log output 與 Ping pong 改以 Gateway API 暴露（k3d + Envoy Gateway，Gateway 專用集群），不再用 Ingress
+- 3.3 Log output 與 Ping pong 曾改以 Gateway API 暴露（k3d + Envoy Gateway，Gateway 專用集群），不再用 Ingress；該專用集群已於 2026-11-13 刪除，主集群仍以 Traefik Ingress 暴露
 - 3.4 Ping pong 移除 `/pingpong` 路由，路徑重寫由集群層負責（Gateway：HTTPRoute URLRewrite；主集群：Traefik Middleware stripPrefix）
 - 3.9 DBaaS（Google Cloud SQL）與自行架設 Postgres 的優缺點比較，寫進 project README（初始化工作與成本、維護、備份）
 - 3.11 為專案設定資源 requests 與 limits（以 kubectl top pods 量度）
@@ -100,3 +100,35 @@
 - [3.4](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.4) - 路由重寫
 - [3.9](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.9) - DBaaS 與自行架設比較
 - [3.11](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/3.11) - 資源 requests 與 limits
+
+## Part 4（Chapter 5）練習
+
+- 4.1 Readines probe：為應用加入 readiness probe
+- 4.2 The project, step 21
+- 4.3 Prometheus
+- 4.4 Your canary：金絲雀部署
+- 4.5 The project, step 22
+- 4.6 The project, step 23：訊息系統
+- 4.7 Baby steps to GitOps：以 ArgoCD 管理 log-output，提交即自動同步
+- 4.8 The project, step 24：project 改以 GitOps 部署；修正 ArgoCD directory exclude，令 package.json 不被誤作清單
+- 4.9 The project, step 25：Kustomize base 加 staging / production overlays（staging broadcaster 只記錄不轉發、staging 不備份資料庫、生產 3 副本）；NATS 主題按環境隔離；每日 02:00 備份 todo-db
+- 4.10 The project, the grande finale：程式碼與部署設定分倉；部署設定（ArgoCD Application、Kubernetes 清單、Kustomize）移至設定倉庫 https://github.com/LaomaiAI/devops-with-kubernetes-config，程式碼留於本倉庫；集群的 Application 已改指設定倉庫，production 跟隨設定倉庫的 tag 4.10
+
+## 習題連結（Chapter 5：每題連結至該 release）
+
+- [4.1](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.1) - Readines probe
+- [4.2](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.2) - The project, step 21
+- [4.3](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.3) - Prometheus
+- [4.4](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.4) - Your canary
+- [4.5](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.5) - The project, step 22
+- [4.6](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.6) - The project, step 23
+- [4.7](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.7) - Baby steps to GitOps
+- [4.8](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.8) - The project, step 24
+- [4.9](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.9) - The project, step 25
+- [4.10](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.10) - The project, the grande finale（設定倉庫 release：[4.10](https://github.com/LaomaiAI/devops-with-kubernetes-config/releases/tag/4.10)）
+
+## 運行事件記錄（2026-11-13）
+
+- Traefik 曾故障並多次重啟（重啟 26 次）；Gateway 專用集群已於 2026-11-13 19:53 UTC 刪除，相關暴露改回主集群的 Traefik Ingress。
+- 2026-11-13 集群曾出現 I/O 風暴（2 核負載逾 50、多個進程處於 D-state、kubectl 間歇 TLS 超時），重啟 Codespace 後平息；監控堆疊（Prometheus、Loki、Alloy）暫停至 0 副本。
+- log-output Application 長期為 Progressing：Deployment 0/1 就緒（Pod 1/2 容器就緒），原因未查。
