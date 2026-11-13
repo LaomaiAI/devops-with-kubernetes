@@ -51,3 +51,11 @@ All configuration (PORT, IMAGE_URL, IMAGE_PATH, IMAGE_CACHE_MS, TODO_BACKEND_URL
 - todo-db（Postgres StatefulSet）：requests cpu 100m、memory 128Mi；limits cpu 500m、memory 256Mi。
 
 量度（2026-11-13）：閒置時 project 1m／19Mi、todo-backend 1m／16Mi、todo-db 1m／22Mi。套用後重啟，Pod 全部 Running，新量度為 project 0m／59Mi、todo-backend 1m／68Mi、todo-db 15m／34Mi，皆在 limits 內；首頁待辦仍在（資料保留在 PVC）。
+
+## Exercise 4.2
+
+健康檢查端點 `/healthz`：先檢查 `isHealthy` 旗標，再以 2 秒逾時的 GET 查詢 todo-backend（TODO_BACKEND_URL）；任何一項失敗回 500，否則回 200 `OK`。deployment 同時設 readinessProbe 與 livenessProbe（皆為 HTTP GET `/healthz`，port 3000，initialDelaySeconds 10、periodSeconds 5、timeoutSeconds 5）。
+
+首頁新增「Break the app」按鈕（POST /break），把 `isHealthy` 設為 false；其後 liveness 連續失敗，kubelet 會重啟容器，新進程的 `isHealthy` 回到 true，應用恢復健康。
+
+驗證（2026-11-13）：部署後 `GET /healthz` 回 200，首頁出現「Break the app」按鈕。POST /break 後回 303，`GET /healthz` 立即變 500；約 15 秒後 liveness 連續失敗，kubelet 殺掉容器並重啟，Pod 回到 1/1、RESTARTS 1，`GET /healthz` 再回 200，待辦清單完整。

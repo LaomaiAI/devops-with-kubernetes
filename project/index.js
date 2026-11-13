@@ -41,7 +41,7 @@ async function fetchTodos() {
   }
 }
 function page(todos) {
-  return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>The project App</title></head><body><h1>The project App</h1><img src=/image.jpg alt=Hourly><form method=\"POST\" action=\"/todos\"><input type=\"text\" name=\"todo\" maxlength=\"140\" placeholder=\"New todo\"><button type=\"submit\">Send</button></form><ul><li>" + todos.map((todo) => escapeHtml(todo)).join("</li><li>") + "</li></ul></body></html>";
+  return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>The project App</title></head><body><h1>The project App</h1><img src=/image.jpg alt=Hourly><form method=\"POST\" action=\"/todos\"><input type=\"text\" name=\"todo\" maxlength=\"140\" placeholder=\"New todo\"><button type=\"submit\">Send</button></form><form method='POST' action='/break'><button type='submit'>Break the app</button></form><ul><li>" + todos.map((todo) => escapeHtml(todo)).join("</li><li>") + "</li></ul></body></html>";
 }
 function readBody(req) {
   return new Promise((resolve) => {
@@ -51,8 +51,41 @@ function readBody(req) {
     req.on("error", () => resolve(""));
   });
 }
+let isHealthy = true;
 const server = http.createServer(async (req, res) => {
   const pathname = req.url.split("?")[0];
+  if (pathname === "/healthz") {
+    if (isHealthy === false) {
+      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.end("Broken");
+      console.log("GET /healthz -> 500 (broken)");
+      return;
+    }
+    let backendOk = false;
+    try {
+      const backend = await fetch(TODO_BACKEND_URL, { signal: AbortSignal.timeout(2000) });
+      backendOk = backend.ok;
+    } catch (error) {
+      console.error("Health check failed: " + error.message);
+    }
+    if (backendOk === false) {
+      res.writeHead(500, { "Content-Type": "text/plain" });
+      res.end("Todo backend unavailable");
+      console.log("GET /healthz -> 500 (backend)");
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("OK");
+    console.log("GET /healthz -> 200");
+    return;
+  }
+  if (pathname === "/break" && req.method === "POST") {
+    isHealthy = false;
+    console.log("POST /break -> app broken");
+    res.writeHead(303, { Location: "/" });
+    res.end();
+    return;
+  }
   if (pathname === "/image.jpg") {
     try {
       const img = await getImage();
