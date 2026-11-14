@@ -27,3 +27,13 @@ curl -H "Host: hello.default.172.19.0.2.sslip.io" http://localhost:8081
 回應 Hello World!（HTTP 200；首請求冷啟動 3.19 秒）。
 自動擴縮：閒置後 Pod 自動縮至零（kubectl get pods -l serving.knative.dev/service=hello 無資源）；再請求時由零擴展，新 Pod 2/2 Running。
 流量拆分：改 TARGET=Knative 套用，產生第二版本 hello-00002（回 Hello Knative!），再以 spec.traffic 設最新版本與 hello-00001 各 50%，12 次請求恰為 Hello Knative! 6 次、Hello World! 6 次。
+
+## 5.7 Deploy to serverless：Ping-pong 改為 Knative Service
+
+- Ping-pong（knative/pingpong.yaml）改為 Knative Service：映像 pingpong:latest，imagePullPolicy: Never，最小副本 1（log-output 讀取器以 FQDN 直連 ClusterIP Service，縮至零會無端點；縮至零已在 5.6 以 hello 證明），containerPort 3000，envFrom 沿用 pingpong-config 與 pingpong-db-secret，readinessProbe 為 GET /count。Knative Service 網址為 http://pingpong.exercises.172.19.0.2.sslip.io。
+- log-output 仍為一般 Deployment（knative/log-output.yaml，由設定倉庫清單複製再改）：寫入器與讀取器共用卷，無法拆為單一容器 Knative Service；PINGPONG_URL 改為 http://pingpong.exercises.svc.cluster.local/count（課程提示的完整 FQDN），GREETER_URL 刪除（此集群無 greeter）。
+- 本機映像設定：Knative webhook 預設把映像 tag 解析為 digest，pingpong:latest 無註冊表可查（對 index.docker.io 的 HEAD 回 401），Revision 報 ContainerMissing；已在 config-deployment 加入 registriesSkippingTagResolving: index.docker.io，刪除舊 Revision 後新 Revision 正常建立。
+- 另有兩個 Knative 限制：PORT 是保留環境變數（自設會被 webhook 拒絕，改由 Knative 按 containerPort 自動設定）；min-scale 標註只准放在 spec.template.metadata.annotations（放在 Service 層級會被拒）。
+- 映像匯入須逐節點核對：k3d image import 一次報成功，但 agent-0 節點實際缺少 pingpong:latest，Pod 卡在 ErrImageNeverPull；重匯一次後三節點皆有映像，Pod 恢復 2/2 Running。
+- Kourier 不處理標準 Kubernetes Ingress：以 kubernetes.io/ingress.class: kourier 建的 Ingress 逾 10 分鐘仍無 ADDRESS（Events 為空），logoutput.local 與 pingpong.local 經 8081 皆回 404；控制器日誌只對帳 networking.internal.knative.dev.Ingress，未提及任何標準 Ingress。故課程提示的 URL 改寫規則（選項，「You could」）在此環境無法以 Kourier 實現；Ingress 已刪除。pingpong 經其 Knative Service 網址（Host 標頭）可達；log-output 狀態頁經 kubectl port-forward 驗證。
+- 驗證：curl -H "Host: pingpong.exercises.172.19.0.2.sslip.io" http://localhost:8081/ 依次回 pong 0、pong 1、pong 2、pong 3；/count 回 4；狀態頁顯示 Ping / Pongs: 4。
