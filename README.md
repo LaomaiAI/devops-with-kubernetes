@@ -35,6 +35,7 @@
 - 2026-11-13 在此 Codespace 測試時，picsum.photos 完全無法連通（宿主 curl 回傳 000、Pod 內 fetch 回傳 522），其他圖片網站（如 Google 標誌）可正常下載。
 - 2026-11-13 約 13:12 UTC（集群重建後，default 命名空間）重新請求 /image.jpg 仍為 503（Image unavailable），PVC 內 /usr/src/app/files/ 為空（total 0）。
 - 2026-11-13 約 13:49 UTC（移入 project 命名空間後）再次複查：/image.jpg 仍為 503，PVC 仍為空。代碼未改。
+- 2026-11-14 03:22-03:33 UTC 再次複查：picsum.photos 仍無法連通（宿主 curl 回 000；project Pod 內 wget 10 秒逾時，exit 1）；恢復 project 生產堆疊後，/image.jpg 回 503（應用自身回應 Image unavailable，18 字節），PVC 仍為空；代碼未改。
 - 程式預設仍按課程要求抓取 https://picsum.photos/1200，抓取失敗時回 503；快取邏輯已在本地以可用的圖片 URL 驗證：兩次請求檔案大小同為 13504 字節、MD5 完全相同。
 - 待 picsum 恢復後，只需重新請求 /image.jpg 即可取得圖片並寫入 PVC。
 
@@ -132,12 +133,16 @@
 - 5.1 DIY CRD & controller：DummySite CRD（spec.website_url）與 Node.js 控制器（零依賴，直接呼叫 Kubernetes API）；為每個 DummySite 建立 Deployment（init container 下載網站）／Service／Ingress（DummySite 名稱.dummysite.local）；以 example.com 驗證，經 Ingress 取回 Example Domain 頁面。
 - 5.2 Istio ambient 入門：以 istioctl 1.32.0 安裝 Istio（profile=ambient、global.platform=k3d），default 命名空間標註 ambient；部署 bookinfo 範例（6 個 Pod），經 Gateway API Gateway + HTTPRoute 從外部存取 productpage（HTTP 200，Simple Bookstore App）；恢復 Prometheus 並以 Helm 安裝 Kiali v2.34.1（Prometheus 位址 http://prom-prometheus-server.monitoring:80，控制台 /kiali/ 回 200，流量圖顯示 productpage）。安裝期間須修兩個問題（詳見 istio/README.md）：agent-0 的 containerd 內容庫損壞與 istio-cni 外掛裝錯目錄。
 - 5.3 Log app, Service Mesh Edition：greeter 服務兩個版本（GREETING 環境變數）以 Service + HTTPRoute 分流（v1 權重 75、v2 權重 25）；log-output 以 GREETER_URL 經 greeter-svc 取問候，狀態頁顯示 greetings 行；exercises 命名空間為 ambient 模式，Service 掛載的 HTTPRoute 須有 waypoint 代理才生效（istioctl waypoint apply -n exercises，並為 greeter-svc 標註 istio.io/use-waypoint=waypoint；未標註時路由狀態顯示 route will not be respected）。40 次請求實測 v1 28 次、v2 12 次，約 75/25；Kiali 流量圖顯示 greeter、waypoint、log-output、pingpong、pingpong-db。清單在設定倉庫 greeter/manifests/ 與 log-output/manifests/（Gateway、HTTPRoute）。
+- 5.4 Wikipedia with init and sidecar: Deployment（init container 以 curl 下載 https://en.wikipedia.org/wiki/Kubernetes 至 emptyDir 共享卷，主容器 nginx:alpine 提供該卷；sidecar 隨機等待 5-15 分鐘後下載 https://en.wikipedia.org/wiki/Special:Random 覆寫同一檔案，完成後重啟再等；命名空間 exercises；readinessProbe 為 GET /）。驗證：init 完成後 nginx 提供標題 Kubernetes - Wikipedia（597986 字節）；sidecar 首輪於 2026-11-14 約 03:30 UTC 換頁，標題變為 Marek Jan Chodakiewicz - Wikipedia。清單在設定倉庫 wikipedia/manifests/。
+- 5.5 Platform comparison: 文字答案（限 150 詞），選 Rancher 優於 OpenShift：Rancher 免費開源、輕量、可管理任何 Kubernetes 集群；OpenShift 為自家發行版、須 Red Hat 訂閱、較重且意見較強；已於平台提交 1/1。
+- 5.8 Landscape: 文字答案（限 150 詞），按課程指引列出用過的產品：Kubernetes、k3d、k3s、Docker、containerd、Helm、Prometheus、Grafana、Loki、ArgoCD、Kustomize、Istio、Kiali、Traefik、Envoy Gateway、NGINX、PostgreSQL、Node.js、GitHub Actions；間接使用 Flannel、Envoy、CoreDNS、etcd；已於平台提交 1/1。
 
 ## 習題連結（Chapter 6：每題連結至該 release）
 
 - [5.1](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.1) - DIY CRD & controller
 - [5.2](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.2) - Istio ambient 入門（bookinfo + Kiali）
 - [5.3](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.3) - Log app, Service Mesh Edition（greeter 分流 75/25 + waypoint）
+- [5.4](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.4) - Wikipedia with init and sidecar（設定倉庫 release：[5.4](https://github.com/LaomaiAI/devops-with-kubernetes-config/releases/tag/5.4)）
 
 ## 運行事件記錄（2026-11-13 至 2026-11-14）
 
@@ -147,3 +152,5 @@
 - 2026-11-14 Istio 安裝期間負載再次飆升（2 核負載逾 50、多個進程處於 D-state），編輯器連不上（deadline exceeded），經 Codespaces 頁面完全停止再啟動後恢復；agent-0 的 containerd 內容庫損壞（pause 映像層缺失），在該節點重拉 rancher/mirrored-pause:3.6 修復；Istio 1.32 的 k3d 預設把 istio-cni 外掛裝進 /bin，須手動複製 binary 至 /var/lib/rancher/k3s/data/cni（三節點）；恢復全量應用（ArgoCD）後負載再度飆升，應用已再次暫停至 0 副本，待 5.3 再逐項恢復；README 第 18 行曾多出一個「80」錯字，已修正。
 - 2026-11-14 Codespace 兩度自行停止（編輯器連不上，deadline exceeded；GitHub 狀態頁顯示全部系統正常），經 Codespaces 頁面完全停止再以 Restart codespace 重新啟動後恢復；其後 agent-0 的 containerd 再次崩潰（containerd exited: exit status 2），節點陷入重啟循環，已停止該容器，集群現以 server-0 與 agent-1 兩個節點運行（機器負載隨即由約 10 降至 2.2）。
 - 2026-11-14 pingpong-db 的 local-path PV 固定於已停的 agent-0，Pod 無法排程，刪除 PVC 重建後資料庫在健康節點上重新初始化（計數由 0 重新累計）；5.3 時 GREETER_URL 曾以錯誤縮排插入 deployment.yaml，使 PINGPONG_URL 失去值（YAML 重複鍵以後者為準，GREETER_URL 指向了 pingpong），已修正並重新部署。
+- 2026-11-14 03:24 UTC 恢復 project 命名空間生產堆疊（以 Kustomize production overlay 套用）：原先 Deployment 全無、todo-db 為 0/0；todo-db PVC 的 PV 以 node affinity 固定於已停的 agent-0，刪 PVC 重建後 Postgres 重新初始化（待辦清空為預設三項）；broadcaster 與 message-receiver 映像缺失（ErrImageNeverPull），重建並匯入集群後恢復 6/6 與 1/1；project 三副本因 /healthz 依賴 todo-backend、liveness probe 連續以 137 終止容器，todo-db 就緒後回穩（3/3 1/1）。
+- 2026-11-14 約 03:30 UTC wikipedia sidecar 完成首輪隨機等待並換頁：標題由 Kubernetes - Wikipedia 變為 Marek Jan Chodakiewicz - Wikipedia。
