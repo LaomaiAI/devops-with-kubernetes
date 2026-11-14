@@ -15,7 +15,7 @@
 - GitHub Codespace（免費額度內使用），未使用付費雲服務、未綁定信用卡、未註冊新帳戶
 - 本地集群：k3d（k3s v1.35.5）+ kubectl v1.37.2 + Docker 29.9.2
 - 建立集群：k3d cluster create --port 8080:80@loadbalancer --port 8081:80@loadbalancer --agents 2
-- Ingress：k3s 內置 Traefik（ingressClassName: traefik），主機名 project.local / logoutput.local，經 localhost:8080（k3d 以 --port 8080:80@loadbalancer 映射）80 測試
+- Ingress：k3s 內置 Traefik（ingressClassName: traefik），主機名 project.local / logoutput.local，經 localhost:8080（k3d 以 --port 8080:80@loadbalancer 映射）測試
 
 ## Part 1（Chapter 2）練習
 
@@ -127,8 +127,19 @@
 - [4.9](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.9) - The project, step 25
 - [4.10](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/4.10) - The project, the grande finale（設定倉庫 release：[4.10](https://github.com/LaomaiAI/devops-with-kubernetes-config/releases/tag/4.10)）
 
-## 運行事件記錄（2026-11-13）
+## Part 5（Chapter 6）練習
+
+- 5.1 DIY CRD & controller：DummySite CRD（spec.website_url）與 Node.js 控制器（零依賴，直接呼叫 Kubernetes API）；為每個 DummySite 建立 Deployment（init container 下載網站）／Service／Ingress（DummySite 名稱.dummysite.local）；以 example.com 驗證，經 Ingress 取回 Example Domain 頁面。
+- 5.2 Istio ambient 入門：以 istioctl 1.32.0 安裝 Istio（profile=ambient、global.platform=k3d），default 命名空間標註 ambient；部署 bookinfo 範例（6 個 Pod），經 Gateway API Gateway + HTTPRoute 從外部存取 productpage（HTTP 200，Simple Bookstore App）；恢復 Prometheus 並以 Helm 安裝 Kiali v2.34.1（Prometheus 位址 http://prom-prometheus-server.monitoring:80，控制台 /kiali/ 回 200，流量圖顯示 productpage）。安裝期間須修兩個問題（詳見 istio/README.md）：agent-0 的 containerd 內容庫損壞與 istio-cni 外掛裝錯目錄。
+
+## 習題連結（Chapter 6：每題連結至該 release）
+
+- [5.1](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.1) - DIY CRD & controller
+- [5.2](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.2) - Istio ambient 入門（bookinfo + Kiali）
+
+## 運行事件記錄（2026-11-13 至 2026-11-14）
 
 - Traefik 曾故障並多次重啟（重啟 26 次）；Gateway 專用集群已於 2026-11-13 19:53 UTC 刪除，相關暴露改回主集群的 Traefik Ingress。
-- 2026-11-13 集群曾出現 I/O 風暴（2 核負載逾 50、多個進程處於 D-state、kubectl 間歇 TLS 超時），重啟 Codespace 後平息；監控堆疊（Prometheus、Loki、Alloy）暫停至 0 副本。
+- 2026-11-13 集群曾出現 I/O 風暴（2 核負載逾 50、多個進程處於 D-state、kubectl 間歇 TLS 超時），重啟 Codespace 後平息；監控堆疊（Prometheus、Loki、Alloy）曾暫停至 0 副本；2026-11-14 為 Kiali 恢復 Prometheus Server 至 1 副本，Alloy、loki-canary、node-exporter DaemonSet 已刪除。
 - log-output Application 長期為 Progressing：Deployment 0/1 就緒（Pod 1/2 容器就緒），原因未查。
+- 2026-11-14 Istio 安裝期間負載再次飆升（2 核負載逾 50、多個進程處於 D-state），編輯器連不上（deadline exceeded），經 Codespaces 頁面完全停止再啟動後恢復；agent-0 的 containerd 內容庫損壞（pause 映像層缺失），在該節點重拉 rancher/mirrored-pause:3.6 修復；Istio 1.32 的 k3d 預設把 istio-cni 外掛裝進 /bin，須手動複製 binary 至 /var/lib/rancher/k3s/data/cni（三節點）；恢復全量應用（ArgoCD）後負載再度飆升，應用已再次暫停至 0 副本，待 5.3 再逐項恢復；README 第 18 行曾多出一個「80」錯字，已修正。
