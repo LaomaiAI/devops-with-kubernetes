@@ -15,6 +15,7 @@ if (FILE_PATH === undefined || FILE_PATH === "") {
   process.exit(1);
 }
 const PINGPONG_URL = process.env.PINGPONG_URL;
+const GREETER_URL = process.env.GREETER_URL;
 const INFO_FILE_PATH = process.env.INFO_FILE_PATH || "";
 const MESSAGE = process.env.MESSAGE || "";
 const uuid = crypto.randomUUID();
@@ -29,6 +30,17 @@ async function fetchPingCount() {
     const text = (await res.text()).trim();
     const match = text.match(/([0-9]+)/);
     return match === null ? null : match[1];
+  } catch (err) {
+    return null;
+  }
+}
+
+async function fetchGreeting() {
+  try {
+    const res = await fetch(GREETER_URL, { signal: AbortSignal.timeout(5000) });
+    if (res.ok === false) { return null; }
+    const text = (await res.text()).trim();
+    return text;
   } catch (err) {
     return null;
   }
@@ -86,6 +98,10 @@ if (MODE === "reader" || MODE === "both") {
     const count = await fetchPingCount();
     if (count !== null) {
       lines.push("Ping / Pongs: " + count);
+    }
+    const greeting = await fetchGreeting();
+    if (greeting !== null) {
+      lines.push("greetings: " + greeting);
     }
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end(lines.join(NL) + NL);

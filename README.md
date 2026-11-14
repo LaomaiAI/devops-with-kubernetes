@@ -131,15 +131,19 @@
 
 - 5.1 DIY CRD & controller：DummySite CRD（spec.website_url）與 Node.js 控制器（零依賴，直接呼叫 Kubernetes API）；為每個 DummySite 建立 Deployment（init container 下載網站）／Service／Ingress（DummySite 名稱.dummysite.local）；以 example.com 驗證，經 Ingress 取回 Example Domain 頁面。
 - 5.2 Istio ambient 入門：以 istioctl 1.32.0 安裝 Istio（profile=ambient、global.platform=k3d），default 命名空間標註 ambient；部署 bookinfo 範例（6 個 Pod），經 Gateway API Gateway + HTTPRoute 從外部存取 productpage（HTTP 200，Simple Bookstore App）；恢復 Prometheus 並以 Helm 安裝 Kiali v2.34.1（Prometheus 位址 http://prom-prometheus-server.monitoring:80，控制台 /kiali/ 回 200，流量圖顯示 productpage）。安裝期間須修兩個問題（詳見 istio/README.md）：agent-0 的 containerd 內容庫損壞與 istio-cni 外掛裝錯目錄。
+- 5.3 Log app, Service Mesh Edition：greeter 服務兩個版本（GREETING 環境變數）以 Service + HTTPRoute 分流（v1 權重 75、v2 權重 25）；log-output 以 GREETER_URL 經 greeter-svc 取問候，狀態頁顯示 greetings 行；exercises 命名空間為 ambient 模式，Service 掛載的 HTTPRoute 須有 waypoint 代理才生效（istioctl waypoint apply -n exercises，並為 greeter-svc 標註 istio.io/use-waypoint=waypoint；未標註時路由狀態顯示 route will not be respected）。40 次請求實測 v1 28 次、v2 12 次，約 75/25；Kiali 流量圖顯示 greeter、waypoint、log-output、pingpong、pingpong-db。清單在設定倉庫 greeter/manifests/ 與 log-output/manifests/（Gateway、HTTPRoute）。
 
 ## 習題連結（Chapter 6：每題連結至該 release）
 
 - [5.1](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.1) - DIY CRD & controller
 - [5.2](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.2) - Istio ambient 入門（bookinfo + Kiali）
+- [5.3](https://github.com/LaomaiAI/devops-with-kubernetes/releases/tag/5.3) - Log app, Service Mesh Edition（greeter 分流 75/25 + waypoint）
 
 ## 運行事件記錄（2026-11-13 至 2026-11-14）
 
 - Traefik 曾故障並多次重啟（重啟 26 次）；Gateway 專用集群已於 2026-11-13 19:53 UTC 刪除，相關暴露改回主集群的 Traefik Ingress。
 - 2026-11-13 集群曾出現 I/O 風暴（2 核負載逾 50、多個進程處於 D-state、kubectl 間歇 TLS 超時），重啟 Codespace 後平息；監控堆疊（Prometheus、Loki、Alloy）曾暫停至 0 副本；2026-11-14 為 Kiali 恢復 Prometheus Server 至 1 副本，Alloy、loki-canary、node-exporter DaemonSet 已刪除。
-- log-output Application 長期為 Progressing：Deployment 0/1 就緒（Pod 1/2 容器就緒），原因未查。
+- log-output Application 長期為 Progressing：Deployment 0/1 就緒（Pod 1/2 容器就緒）。原因已查：reader 的 readiness probe 是 GET /healthz，而 /healthz 在 pingpong 不通時回 500，令 Pod 停在 1/2；2026-11-14 資料庫復原、環境變數修正後 log-output 恢復 2/2 就緒。
 - 2026-11-14 Istio 安裝期間負載再次飆升（2 核負載逾 50、多個進程處於 D-state），編輯器連不上（deadline exceeded），經 Codespaces 頁面完全停止再啟動後恢復；agent-0 的 containerd 內容庫損壞（pause 映像層缺失），在該節點重拉 rancher/mirrored-pause:3.6 修復；Istio 1.32 的 k3d 預設把 istio-cni 外掛裝進 /bin，須手動複製 binary 至 /var/lib/rancher/k3s/data/cni（三節點）；恢復全量應用（ArgoCD）後負載再度飆升，應用已再次暫停至 0 副本，待 5.3 再逐項恢復；README 第 18 行曾多出一個「80」錯字，已修正。
+- 2026-11-14 Codespace 兩度自行停止（編輯器連不上，deadline exceeded；GitHub 狀態頁顯示全部系統正常），經 Codespaces 頁面完全停止再以 Restart codespace 重新啟動後恢復；其後 agent-0 的 containerd 再次崩潰（containerd exited: exit status 2），節點陷入重啟循環，已停止該容器，集群現以 server-0 與 agent-1 兩個節點運行（機器負載隨即由約 10 降至 2.2）。
+- 2026-11-14 pingpong-db 的 local-path PV 固定於已停的 agent-0，Pod 無法排程，刪除 PVC 重建後資料庫在健康節點上重新初始化（計數由 0 重新累計）；5.3 時 GREETER_URL 曾以錯誤縮排插入 deployment.yaml，使 PINGPONG_URL 失去值（YAML 重複鍵以後者為準，GREETER_URL 指向了 pingpong），已修正並重新部署。
